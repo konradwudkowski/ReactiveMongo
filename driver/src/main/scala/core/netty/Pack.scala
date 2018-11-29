@@ -26,6 +26,14 @@ private[core] object Pack {
 
     logger.info(s"Instantiated $pack")
 
+    println
+    println
+    println
+    println(s"Instantiated pack $pack")
+    println
+    println
+    println
+
     pack
   }
 

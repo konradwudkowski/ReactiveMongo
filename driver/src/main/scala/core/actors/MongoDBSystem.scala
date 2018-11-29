@@ -412,6 +412,11 @@ trait MongoDBSystem extends Actor {
             if (con.channel.isOpen) { // can still be reused
               con.copy(status = ConnectionStatus.Disconnected)
             } else {
+
+              println
+              println("n.createConnection")
+              println
+
               n.createConnection(channelFactory, self)
             }
           }
@@ -621,6 +626,7 @@ trait MongoDBSystem extends Actor {
             if (node.connected.isEmpty) {
               // If there no longer established connection
               trace(s"Unset the node status on disconnect (#${chanId})")
+              println(s"Unset the node status on disconnect (#${chanId})")
 
               node._copy(status = NodeStatus.Unknown)
             } else {

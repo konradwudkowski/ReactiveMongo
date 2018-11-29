@@ -3,33 +3,15 @@ package reactivemongo.core.nodeset // TODO: Move to `netty` package
 import java.lang.{ Boolean => JBool }
 
 import scala.concurrent.Promise
-
 import reactivemongo.io.netty.util.concurrent.{ Future, GenericFutureListener }
-
 import reactivemongo.io.netty.bootstrap.Bootstrap
-
-import reactivemongo.io.netty.channel.{
-  Channel,
-  ChannelFuture,
-  ChannelFutureListener,
-  ChannelOption,
-  EventLoopGroup
-}, ChannelOption.{ CONNECT_TIMEOUT_MILLIS, SO_KEEPALIVE, TCP_NODELAY }
-
+import reactivemongo.io.netty.channel.{ Channel, ChannelFuture, ChannelFutureListener, ChannelOption, EventLoopGroup }
+import ChannelOption.{ CONNECT_TIMEOUT_MILLIS, SO_KEEPALIVE, TCP_NODELAY, SO_BACKLOG }
 import reactivemongo.io.netty.channel.ChannelInitializer
-
-import akka.actor.ActorRef
-
+import akka.actor.{ ActorRef, ActorSystem }
 import reactivemongo.util.LazyLogger
-
-import reactivemongo.core.protocol.{
-  MongoHandler,
-  RequestEncoder,
-  ResponseFrameDecoder,
-  ResponseDecoder
-}
+import reactivemongo.core.protocol.{ MongoHandler, RequestEncoder, ResponseDecoder, ResponseFrameDecoder }
 import reactivemongo.core.actors.ChannelDisconnected
-
 import reactivemongo.api.MongoConnectionOptions
 
 /**

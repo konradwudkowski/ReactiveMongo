@@ -27,16 +27,19 @@ class DatabaseSpec(implicit ee: ExecutionEnv)
       }
 
       "with failure" in {
-        lazy val con = Common.driver.connection(List("unavailable:27017"))
+        val parsedUri = MongoConnection.parseURI("mongodb://localhost:27018").get
+        lazy val con = Common.driver.connection(parsedUri)
         val ws = scala.collection.mutable.ListBuffer.empty[Int]
         val expected = List(2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40)
-        val fos1 = FailoverStrategy(FiniteDuration(50, "ms"), 20,
+        val fos1 = FailoverStrategy(FiniteDuration(50, "ms"), 5,
           { n => val w = n * 2; ws += w; w.toDouble })
-        val fos2 = FailoverStrategy(FiniteDuration(50, "ms"), 20,
+        val fos2 = FailoverStrategy(FiniteDuration(50, "ms"), 5,
           _ * 2 toDouble) // without accumulator
 
         val before = System.currentTimeMillis()
         val estmout = estTimeout(fos2)
+
+        println(s"estmout = ${estmout}")
 
         con.database("foo", fos1).map(_ => List.empty[Int]).
           recover({ case _ => ws.result() }) must beEqualTo(expected).
@@ -64,103 +67,103 @@ class DatabaseSpec(implicit ee: ExecutionEnv)
     }
     section("mongo2", "mongo24", "not_mongo26")
 
-    "manage session" >> {
-      section("gt_mongo32")
+    //    "manage session" >> {
+    //      section("gt_mongo32")
+    //
+    //      "start & end" in {
+    //        (for {
+    //          db <- Common.db.startSession()
+    //          _ <- db.startSession() // no-op
+    //          after <- db.endSession()
+    //        } yield {
+    //          System.identityHashCode(db) -> System.identityHashCode(after)
+    //        }) must beLike[(Int, Int)] {
+    //          case (hash1, hash2) => hash1 must not(beEqualTo(hash2))
+    //        }.awaitFor(timeout)
+    //      }
+    //
+    //      "not end without start" in {
+    //        Common.db.endSession() must beAnInstanceOf[DefaultDB].await
+    //      }
+    //
+    //      "not kill without start" in {
+    //        Common.db.killSession() must beAnInstanceOf[DefaultDB].await
+    //      }
+    //
+    //      "start & kill" in {
+    //        Common.db.startSession().flatMap(_.killSession()).
+    //          aka("session ID") must beAnInstanceOf[DefaultDB].awaitFor(timeout)
+    //      }
+    //
+    //      section("gt_mongo32")
+    //    }
 
-      "start & end" in {
-        (for {
-          db <- Common.db.startSession()
-          _ <- db.startSession() // no-op
-          after <- db.endSession()
-        } yield {
-          System.identityHashCode(db) -> System.identityHashCode(after)
-        }) must beLike[(Int, Int)] {
-          case (hash1, hash2) => hash1 must not(beEqualTo(hash2))
-        }.awaitFor(timeout)
-      }
+    //    "admin" >> {
+    //      "rename successfully collection if target doesn't exist" in {
+    //        (for {
+    //          admin <- connection.database("admin", failoverStrategy)
+    //          name1 <- {
+    //            val name = s"foo_${System identityHashCode admin}"
+    //
+    //            db.collection(name).create().map(_ => name)
+    //          }
+    //          name = s"renamed_${System identityHashCode name1}"
+    //          c2 <- admin.renameCollection(db.name, name1, name)
+    //        } yield name -> c2.name) must beLike[(String, String)] {
+    //          case (expected, name) => name aka "new name" must_== expected
+    //        }.await(0, timeout)
+    //      }
+    //
+    //      "fail to rename collection if target exists" in {
+    //        val c1 = db.collection(s"foo_${System identityHashCode ee}")
+    //
+    //        (for {
+    //          _ <- c1.create()
+    //          name = s"renamed_${System identityHashCode c1}"
+    //          c2 = db.collection(name)
+    //          _ <- c2.create()
+    //        } yield name) must beLike[String] {
+    //          case name => name must not(beEqualTo(c1.name)) and {
+    //            Await.result(for {
+    //              admin <- connection.database("admin", failoverStrategy)
+    //              _ <- admin.renameCollection(db.name, c1.name, name)
+    //            } yield {}, timeout) must throwA[Exception].like {
+    //              case err: CommandError =>
+    //                err.errmsg aka err.toString must beSome[String].which {
+    //                  _.indexOf("target namespace exists") != -1
+    //                }
+    //            }
+    //          }
+    //        }.await(0, timeout)
+    //      }
+    //    }
 
-      "not end without start" in {
-        Common.db.endSession() must beAnInstanceOf[DefaultDB].await
-      }
+    //    "be hashed" in {
+    //      import reactivemongo.api.commands.DBHashResult
+    //
+    //      reactivemongo.api.tests.dbHash(db) must beLike[DBHashResult] {
+    //        case hash => hash.host must not(beEmpty[String]) and {
+    //          hash.md5 must not(beEmpty[String])
+    //        } and {
+    //          hash.collectionHashes must not(beEmpty[Map[String, String]])
+    //        }
+    //      }.await(1, timeout)
+    //    }
 
-      "not kill without start" in {
-        Common.db.killSession() must beAnInstanceOf[DefaultDB].await
-      }
-
-      "start & kill" in {
-        Common.db.startSession().flatMap(_.killSession()).
-          aka("session ID") must beAnInstanceOf[DefaultDB].awaitFor(timeout)
-      }
-
-      section("gt_mongo32")
-    }
-
-    "admin" >> {
-      "rename successfully collection if target doesn't exist" in {
-        (for {
-          admin <- connection.database("admin", failoverStrategy)
-          name1 <- {
-            val name = s"foo_${System identityHashCode admin}"
-
-            db.collection(name).create().map(_ => name)
-          }
-          name = s"renamed_${System identityHashCode name1}"
-          c2 <- admin.renameCollection(db.name, name1, name)
-        } yield name -> c2.name) must beLike[(String, String)] {
-          case (expected, name) => name aka "new name" must_== expected
-        }.await(0, timeout)
-      }
-
-      "fail to rename collection if target exists" in {
-        val c1 = db.collection(s"foo_${System identityHashCode ee}")
-
-        (for {
-          _ <- c1.create()
-          name = s"renamed_${System identityHashCode c1}"
-          c2 = db.collection(name)
-          _ <- c2.create()
-        } yield name) must beLike[String] {
-          case name => name must not(beEqualTo(c1.name)) and {
-            Await.result(for {
-              admin <- connection.database("admin", failoverStrategy)
-              _ <- admin.renameCollection(db.name, c1.name, name)
-            } yield {}, timeout) must throwA[Exception].like {
-              case err: CommandError =>
-                err.errmsg aka err.toString must beSome[String].which {
-                  _.indexOf("target namespace exists") != -1
-                }
-            }
-          }
-        }.await(0, timeout)
-      }
-    }
-
-    "be hashed" in {
-      import reactivemongo.api.commands.DBHashResult
-
-      reactivemongo.api.tests.dbHash(db) must beLike[DBHashResult] {
-        case hash => hash.host must not(beEmpty[String]) and {
-          hash.md5 must not(beEmpty[String])
-        } and {
-          hash.collectionHashes must not(beEmpty[Map[String, String]])
-        }
-      }.await(1, timeout)
-    }
-
-    {
-      val dbName = s"databasespec-${System identityHashCode ee}"
-
-      def dropSpec(con: MongoConnection, timeout: FiniteDuration) =
-        con.database(dbName).flatMap(_.drop()).
-          aka("drop") must beTypedEqualTo({}).await(2, timeout)
-
-      "be dropped with the default connection" in {
-        dropSpec(connection, timeout)
-      }
-
-      "be dropped with the slow connection" in {
-        dropSpec(slowConnection, slowTimeout)
-      }
-    }
+    //    {
+    //      val dbName = s"databasespec-${System identityHashCode ee}"
+    //
+    //      def dropSpec(con: MongoConnection, timeout: FiniteDuration) =
+    //        con.database(dbName).flatMap(_.drop()).
+    //          aka("drop") must beTypedEqualTo({}).await(2, timeout)
+    //
+    //      "be dropped with the default connection" in {
+    //        dropSpec(connection, timeout)
+    //      }
+    //
+    //      "be dropped with the slow connection" in {
+    //        dropSpec(slowConnection, slowTimeout)
+    //      }
+    //    }
   }
 }

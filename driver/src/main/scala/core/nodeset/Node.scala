@@ -63,9 +63,15 @@ private[reactivemongo] case class Node(
 
   private[core] def createConnection(
     channelFactory: ChannelFactory,
-    receiver: ActorRef): Connection = Connection(
-    channelFactory.create(host, port, receiver),
-    ConnectionStatus.Connecting, Set.empty, None)
+    receiver: ActorRef): Connection = {
+
+    println("trying to create a new connection")
+
+    Connection(
+      channelFactory.create(host, port, receiver),
+      ConnectionStatus.Connecting, Set.empty, None)
+
+  }
 
   // TODO: Remove when aliases is refactored
   private[reactivemongo] def _copy(

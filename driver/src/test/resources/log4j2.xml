@@ -12,7 +12,7 @@
     <logger name="reactivemongo.api.MongoConnection" level="OFF" />
 
     <logger name="NettyProxy" level="DEBUG" />
-    <logger name="reactivemongo.core" level="OFF" />
+    <logger name="reactivemongo.core" level="DEBUG" />
 
     <logger name="reactivemongo.io.netty" level="WARN" />
 
@@ -24,7 +24,7 @@
 
     <!-- logger name="reactivemongo.io.netty.util.ResourceLeakDetector" level="TRACE" / -->
 
-    <root level="WARN">
+    <root level="INFO">
       <appender-ref ref="Console"/>
     </root>
   </loggers>
