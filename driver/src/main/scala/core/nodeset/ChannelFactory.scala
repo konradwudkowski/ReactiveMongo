@@ -1,35 +1,18 @@
 package reactivemongo.core.nodeset // TODO: Move to `netty` package
 
 import java.lang.{ Boolean => JBool }
+import java.util.concurrent.TimeUnit
 
 import scala.concurrent.Promise
-
 import reactivemongo.io.netty.util.concurrent.{ Future, GenericFutureListener }
-
 import reactivemongo.io.netty.bootstrap.Bootstrap
-
-import reactivemongo.io.netty.channel.{
-  Channel,
-  ChannelFuture,
-  ChannelFutureListener,
-  ChannelOption,
-  EventLoopGroup
-}, ChannelOption.{ CONNECT_TIMEOUT_MILLIS, SO_KEEPALIVE, TCP_NODELAY }
-
+import reactivemongo.io.netty.channel.{ Channel, ChannelFuture, ChannelFutureListener, ChannelOption, EventLoopGroup }
+import ChannelOption.{ CONNECT_TIMEOUT_MILLIS, SO_KEEPALIVE, TCP_NODELAY }
 import reactivemongo.io.netty.channel.ChannelInitializer
-
 import akka.actor.ActorRef
-
 import reactivemongo.util.LazyLogger
-
-import reactivemongo.core.protocol.{
-  MongoHandler,
-  RequestEncoder,
-  ResponseFrameDecoder,
-  ResponseDecoder
-}
+import reactivemongo.core.protocol.{ MongoHandler, RequestEncoder, ResponseDecoder, ResponseFrameDecoder }
 import reactivemongo.core.actors.ChannelDisconnected
-
 import reactivemongo.api.MongoConnectionOptions
 
 /**
@@ -71,7 +54,12 @@ private[reactivemongo] final class ChannelFactory(
               s"Connection to ${host}:${port} refused for channel #${chanId}",
               op.cause)
 
-            receiver ! ChannelDisconnected(chanId)
+            op.channel().eventLoop().schedule(new Runnable {
+              def run(): Unit = {
+                receiver ! ChannelDisconnected(chanId)
+              }
+            }, options.reconnectDelayMS, TimeUnit.MILLISECONDS)
+
           }
         }
       })
